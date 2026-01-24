@@ -19,9 +19,9 @@ Basic task tracker with a vertical kanban view.
 ### Attributes
 - name (optional)
 - details
-- created_at
-- updated_at
-- closed_at
+- created_at (UTC, ISO 8601)
+- updated_at (UTC, ISO 8601)
+- closed_at (UTC, ISO 8601)
 
 ### Cards
 - ~5:4 aspect ratio, auto-flow into rows as needed (responsive grid)

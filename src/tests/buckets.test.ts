@@ -8,8 +8,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     name: 'Test task',
     details: '',
     position: 0,
-    created_at: '2024-01-01 00:00:00',
-    updated_at: '2024-01-01 00:00:00',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
     closed_at: null,
     ...overrides,
   };
@@ -19,7 +19,7 @@ describe('getOpenTasks', () => {
   it('returns only tasks without closed_at', () => {
     const tasks: Task[] = [
       makeTask({ id: 1, closed_at: null, position: 0 }),
-      makeTask({ id: 2, closed_at: '2024-06-01 12:00:00', position: 1 }),
+      makeTask({ id: 2, closed_at: '2024-06-01T12:00:00Z', position: 1 }),
       makeTask({ id: 3, closed_at: null, position: 2 }),
     ];
     const open = getOpenTasks(tasks);
@@ -39,7 +39,7 @@ describe('getOpenTasks', () => {
 
   it('returns empty array when all tasks are closed', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-01 12:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-01T12:00:00Z' }),
     ];
     expect(getOpenTasks(tasks)).toHaveLength(0);
   });
@@ -50,8 +50,8 @@ describe('getOpenTasks', () => {
 });
 
 describe('groupCompletedTasks', () => {
-  // Fix "now" to 2024-06-15 12:00:00 (Saturday)
-  const NOW = new Date('2024-06-15T12:00:00');
+  // Fix "now" to 2024-06-15 12:00:00 UTC (Saturday)
+  const NOW = new Date('2024-06-15T12:00:00Z');
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -73,7 +73,7 @@ describe('groupCompletedTasks', () => {
 
   it('groups task closed today into "Today" bucket', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-15 08:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-15T08:00:00Z' }),
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets).toHaveLength(1);
@@ -83,7 +83,7 @@ describe('groupCompletedTasks', () => {
 
   it('groups task closed yesterday into "Yesterday" bucket', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-14 18:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-14T18:00:00Z' }),
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets).toHaveLength(1);
@@ -92,11 +92,11 @@ describe('groupCompletedTasks', () => {
 
   it('groups tasks 2-6 days ago into individual day buckets', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-13 12:00:00' }), // 2 days ago
-      makeTask({ id: 2, closed_at: '2024-06-12 12:00:00' }), // 3 days ago
-      makeTask({ id: 3, closed_at: '2024-06-11 12:00:00' }), // 4 days ago
-      makeTask({ id: 4, closed_at: '2024-06-10 12:00:00' }), // 5 days ago
-      makeTask({ id: 5, closed_at: '2024-06-09 12:00:00' }), // 6 days ago
+      makeTask({ id: 1, closed_at: '2024-06-13T12:00:00Z' }), // 2 days ago
+      makeTask({ id: 2, closed_at: '2024-06-12T12:00:00Z' }), // 3 days ago
+      makeTask({ id: 3, closed_at: '2024-06-11T12:00:00Z' }), // 4 days ago
+      makeTask({ id: 4, closed_at: '2024-06-10T12:00:00Z' }), // 5 days ago
+      makeTask({ id: 5, closed_at: '2024-06-09T12:00:00Z' }), // 6 days ago
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets).toHaveLength(5);
@@ -113,7 +113,7 @@ describe('groupCompletedTasks', () => {
     // 1 calendar week ago from Saturday June 15 (week starts Sunday)
     // Last week: Sunday June 2 - Saturday June 8
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-05 12:00:00' }), // Wednesday of last week
+      makeTask({ id: 1, closed_at: '2024-06-05T12:00:00Z' }), // Wednesday of last week
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets.some(b => b.label === 'Last week')).toBe(true);
@@ -121,8 +121,8 @@ describe('groupCompletedTasks', () => {
 
   it('groups tasks 2-4 weeks ago into week buckets', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-01 12:00:00' }), // ~2 weeks ago
-      makeTask({ id: 2, closed_at: '2024-05-25 12:00:00' }), // ~3 weeks ago
+      makeTask({ id: 1, closed_at: '2024-06-01T12:00:00Z' }), // ~2 weeks ago
+      makeTask({ id: 2, closed_at: '2024-05-25T12:00:00Z' }), // ~3 weeks ago
     ];
     const buckets = groupCompletedTasks(tasks);
     const weekBuckets = buckets.filter(b => b.label.includes('weeks ago'));
@@ -131,8 +131,8 @@ describe('groupCompletedTasks', () => {
 
   it('groups older tasks by month name', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-03-15 12:00:00' }), // March
-      makeTask({ id: 2, closed_at: '2024-01-10 12:00:00' }), // January
+      makeTask({ id: 1, closed_at: '2024-03-15T12:00:00Z' }), // March
+      makeTask({ id: 2, closed_at: '2024-01-10T12:00:00Z' }), // January
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets.some(b => b.label === 'March 2024')).toBe(true);
@@ -141,9 +141,9 @@ describe('groupCompletedTasks', () => {
 
   it('sorts buckets from most recent to oldest', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-15 08:00:00' }), // Today
-      makeTask({ id: 2, closed_at: '2024-06-14 12:00:00' }), // Yesterday
-      makeTask({ id: 3, closed_at: '2024-03-15 12:00:00' }), // March
+      makeTask({ id: 1, closed_at: '2024-06-15T08:00:00Z' }), // Today
+      makeTask({ id: 2, closed_at: '2024-06-14T12:00:00Z' }), // Yesterday
+      makeTask({ id: 3, closed_at: '2024-03-15T12:00:00Z' }), // March
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets[0].label).toBe('Today');
@@ -153,9 +153,9 @@ describe('groupCompletedTasks', () => {
 
   it('sorts tasks within a bucket by closed_at descending', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-15 08:00:00' }),
-      makeTask({ id: 2, closed_at: '2024-06-15 14:00:00' }),
-      makeTask({ id: 3, closed_at: '2024-06-15 10:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-15T08:00:00Z' }),
+      makeTask({ id: 2, closed_at: '2024-06-15T14:00:00Z' }),
+      makeTask({ id: 3, closed_at: '2024-06-15T10:00:00Z' }),
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets[0].tasks.map(t => t.id)).toEqual([2, 3, 1]);
@@ -163,8 +163,8 @@ describe('groupCompletedTasks', () => {
 
   it('multiple tasks in the same day bucket', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-13 08:00:00' }),
-      makeTask({ id: 2, closed_at: '2024-06-13 16:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-13T08:00:00Z' }),
+      makeTask({ id: 2, closed_at: '2024-06-13T16:00:00Z' }),
     ];
     const buckets = groupCompletedTasks(tasks);
     expect(buckets).toHaveLength(1);
@@ -174,7 +174,7 @@ describe('groupCompletedTasks', () => {
 
   it('ignores open tasks', () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, closed_at: '2024-06-15 08:00:00' }),
+      makeTask({ id: 1, closed_at: '2024-06-15T08:00:00Z' }),
       makeTask({ id: 2, closed_at: null }),
     ];
     const buckets = groupCompletedTasks(tasks);

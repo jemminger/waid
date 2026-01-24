@@ -8,8 +8,8 @@ const MIGRATIONS = [
     name TEXT,
     details TEXT NOT NULL DEFAULT '',
     position REAL NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     closed_at TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS settings (
@@ -26,7 +26,7 @@ async function seedSampleData(database: Database): Promise<void> {
   function daysAgo(n: number): string {
     const d = new Date(now);
     d.setDate(d.getDate() - n);
-    return d.toISOString().replace('T', ' ').slice(0, 19);
+    return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
   }
 
   const tasks: { name: string | null; details: string; closed_days_ago: number }[] = [

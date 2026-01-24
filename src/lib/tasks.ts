@@ -23,7 +23,7 @@ export async function createTask({ name, details }: { name?: string | null; deta
 export async function updateTask(id: number, { name, details }: { name?: string | null; details?: string }): Promise<Task> {
   const db = await getDb();
   await db.execute(
-    "UPDATE tasks SET name = ?, details = ?, updated_at = datetime('now') WHERE id = ?",
+    "UPDATE tasks SET name = ?, details = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
     [name ?? null, details ?? '', id]
   );
 
@@ -34,7 +34,7 @@ export async function updateTask(id: number, { name, details }: { name?: string 
 export async function closeTask(id: number): Promise<Task> {
   const db = await getDb();
   await db.execute(
-    "UPDATE tasks SET closed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
+    "UPDATE tasks SET closed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
     [id]
   );
 
@@ -45,7 +45,7 @@ export async function closeTask(id: number): Promise<Task> {
 export async function reopenTask(id: number): Promise<Task> {
   const db = await getDb();
   await db.execute(
-    "UPDATE tasks SET closed_at = NULL, updated_at = datetime('now') WHERE id = ?",
+    "UPDATE tasks SET closed_at = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
     [id]
   );
 
@@ -61,7 +61,7 @@ export async function deleteTask(id: number): Promise<void> {
 export async function reorderTask(id: number, newPosition: number): Promise<Task> {
   const db = await getDb();
   await db.execute(
-    "UPDATE tasks SET position = ?, updated_at = datetime('now') WHERE id = ?",
+    "UPDATE tasks SET position = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?",
     [newPosition, id]
   );
 

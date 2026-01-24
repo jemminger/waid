@@ -28,8 +28,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     name: null,
     details: '',
     position: 0,
-    created_at: '2024-06-15 12:00:00',
-    updated_at: '2024-06-15 12:00:00',
+    created_at: '2024-06-15T12:00:00Z',
+    updated_at: '2024-06-15T12:00:00Z',
     closed_at: null,
     ...overrides,
   };
@@ -92,7 +92,7 @@ describe('formatTimestamp', () => {
   });
 
   it('formats a date string to short month and day', () => {
-    const result = formatTimestamp('2024-06-15 12:00:00');
+    const result = formatTimestamp('2024-06-15T12:00:00Z');
     expect(result).toContain('Jun');
     expect(result).toContain('15');
   });
