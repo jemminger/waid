@@ -19,9 +19,14 @@ Basic task tracker with a vertical kanban view.
 ### Attributes
 - name (optional)
 - details
-- created_at (UTC, ISO 8601)
-- updated_at (UTC, ISO 8601)
-- closed_at (UTC, ISO 8601)
+- created_at (stored UTC, displayed in local timezone)
+- updated_at (stored UTC, displayed in local timezone)
+- closed_at (stored UTC, displayed in local timezone)
+
+### Timezone Handling
+- All timestamps are stored in the database as UTC ISO 8601 with Z suffix
+- On display, timestamps are converted to the user's local timezone
+- Bucket grouping (Today, Yesterday, etc.) uses local calendar days
 
 ### Cards
 - ~5:4 aspect ratio, auto-flow into rows as needed (responsive grid)

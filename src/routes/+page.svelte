@@ -4,6 +4,7 @@
   import { slide } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import groupCompletedTasks, { getOpenTasks } from '$lib/buckets';
+  import { formatTimestamp } from '$lib/dates';
   import type { Task } from '$lib/types';
   import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
   import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -161,11 +162,6 @@
     return detailText.length > 120 ? detailText.slice(0, 120) + '...' : detailText;
   }
 
-  function formatTimestamp(dateStr: string | null): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
 
   function handleTaskClick(task: Task) {
     editingTask = task;

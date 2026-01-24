@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { formatTimestamp } from '$lib/dates';
 import type { Task } from '$lib/types';
 
 // These helpers are defined in +page.svelte, replicated here for testing
@@ -14,12 +15,6 @@ function getTruncatedDetails(task: Task): string {
   const detailText = task.name ? task.details : lines.slice(1).join('\n');
   if (!detailText.trim()) return '';
   return detailText.length > 120 ? detailText.slice(0, 120) + '...' : detailText;
-}
-
-function formatTimestamp(dateStr: string | null): string {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -91,13 +86,15 @@ describe('formatTimestamp', () => {
     expect(formatTimestamp(null)).toBe('');
   });
 
-  it('formats a date string to short month and day', () => {
-    const result = formatTimestamp('2024-06-15T12:00:00Z');
+  it('formats a UTC date string to local short month and day', () => {
+    // Construct a UTC string that maps to a known local date
+    const local = new Date(2024, 5, 15, 12, 0, 0); // June 15 noon local
+    const result = formatTimestamp(local.toISOString());
     expect(result).toContain('Jun');
     expect(result).toContain('15');
   });
 
-  it('handles ISO format dates', () => {
+  it('handles ISO format dates without Z suffix', () => {
     const result = formatTimestamp('2024-01-03T08:30:00');
     expect(result).toContain('Jan');
     expect(result).toContain('3');

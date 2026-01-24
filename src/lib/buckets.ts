@@ -4,6 +4,7 @@ import {
   format
 } from 'date-fns';
 import type { Task, Bucket } from './types';
+import { utcToLocal } from './dates';
 
 function getBucketKey(closedAt: Date, now: Date): string {
   const days = differenceInCalendarDays(now, closedAt);
@@ -26,7 +27,7 @@ export default function groupCompletedTasks(tasks: Task[]): Bucket[] {
   const bucketMap = new Map<string, { label: string; tasks: Task[]; sortDate: Date }>();
 
   for (const task of closedTasks) {
-    const closedDate = new Date(task.closed_at!);
+    const closedDate = utcToLocal(task.closed_at!);
     const key = getBucketKey(closedDate, now);
 
     if (!bucketMap.has(key)) {
@@ -42,7 +43,7 @@ export default function groupCompletedTasks(tasks: Task[]): Bucket[] {
   }
 
   for (const bucket of bucketMap.values()) {
-    bucket.tasks.sort((a, b) => new Date(b.closed_at!).getTime() - new Date(a.closed_at!).getTime());
+    bucket.tasks.sort((a, b) => utcToLocal(b.closed_at!).getTime() - utcToLocal(a.closed_at!).getTime());
   }
 
   return Array.from(bucketMap.values())
