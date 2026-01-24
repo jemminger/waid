@@ -411,16 +411,20 @@
       <Textarea
         bind:value={taskDetails}
         placeholder="Details..."
+        rows={6}
       />
     </div>
 
-    <DialogFooter>
+    <DialogFooter class="mt-8">
       {#if editingTask}
         {#if confirmingDelete}
-          <span class="text-sm text-destructive">Delete this task?</span>
-          <div class="flex-1"></div>
-          <Button variant="outline" onclick={cancelDelete}>Cancel</Button>
-          <Button variant="destructive" onclick={confirmDelete}>Confirm</Button>
+          <div class="flex w-full flex-col items-center gap-3">
+            <span class="text-sm text-destructive">Delete this task?</span>
+            <div class="flex gap-2">
+              <Button variant="outline" onclick={cancelDelete}>Cancel</Button>
+              <Button variant="destructive" onclick={confirmDelete}>Confirm</Button>
+            </div>
+          </div>
         {:else}
           <Button variant="destructive" onclick={handleDelete}>Delete</Button>
           <div class="flex-1"></div>
