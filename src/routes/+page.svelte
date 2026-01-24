@@ -5,6 +5,8 @@
   import { flip } from 'svelte/animate';
   import groupCompletedTasks, { getOpenTasks } from '$lib/buckets';
   import type { Task } from '$lib/types';
+  import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -13,27 +15,58 @@
 
   let tasks = $state<Task[]>([]);
   let loading = $state(true);
+  let searchQuery = $state('');
+  let searchInput = $state<HTMLInputElement | null>(null);
 
-  let completedBuckets = $derived(groupCompletedTasks(tasks));
+  function matchesSearch(task: Task): boolean {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (task.name?.toLowerCase().includes(q) ?? false) || task.details.toLowerCase().includes(q);
+  }
+
+  let filteredTasks = $derived(tasks.filter(matchesSearch));
+  let completedBuckets = $derived(groupCompletedTasks(filteredTasks));
 
   // Infinite scroll: limit visible buckets
   const BUCKETS_PER_PAGE = 5;
   let visibleBucketCount = $state(BUCKETS_PER_PAGE);
-  let visibleBuckets = $derived(completedBuckets.slice(0, visibleBucketCount));
-  let hasMoreBuckets = $derived(visibleBucketCount < completedBuckets.length);
 
   function loadMoreBuckets() {
     visibleBucketCount += BUCKETS_PER_PAGE;
   }
 
   // Drag/drop state for open tasks
+  const DND_TYPE = 'tasks';
   let openItems = $state<Task[]>([]);
   $effect(() => {
-    openItems = getOpenTasks(tasks);
+    openItems = getOpenTasks(filteredTasks);
   });
 
-  // Collapsible bucket state
+  // Today bucket as a separate drop target
+  let todayBucket = $derived(completedBuckets.find(b => b.label === 'Today'));
+  let todayItems = $state<Task[]>([]);
+  $effect(() => {
+    todayItems = todayBucket?.tasks ?? [];
+  });
+  let otherBuckets = $derived(completedBuckets.filter(b => b.label !== 'Today'));
+  let visibleOtherBuckets = $derived(otherBuckets.slice(0, visibleBucketCount));
+  let hasMoreOtherBuckets = $derived(visibleBucketCount < otherBuckets.length);
+
+  // Collapsible bucket state: default collapsed except Today/Yesterday
   let collapsedBuckets: Record<string, boolean> = $state({});
+  let bucketsInitialized = false;
+  $effect(() => {
+    if (!bucketsInitialized && completedBuckets.length > 0) {
+      bucketsInitialized = true;
+      const initial: Record<string, boolean> = {};
+      for (const bucket of completedBuckets) {
+        if (bucket.label !== 'Today' && bucket.label !== 'Yesterday') {
+          initial[bucket.label] = true;
+        }
+      }
+      collapsedBuckets = initial;
+    }
+  });
 
   function handleDndConsider(e: CustomEvent<{ items: Task[] }>) {
     openItems = e.detail.items;
@@ -49,6 +82,21 @@
     await loadTasks();
   }
 
+  function handleTodayConsider(e: CustomEvent<{ items: Task[] }>) {
+    todayItems = e.detail.items;
+  }
+
+  async function handleTodayFinalize(e: CustomEvent<{ items: Task[] }>) {
+    todayItems = e.detail.items;
+    // Close any task that was just dropped here (not already closed)
+    for (const task of todayItems) {
+      if (!task.closed_at) {
+        await closeTask(task.id);
+      }
+    }
+    await loadTasks();
+  }
+
   // Modal state
   let modalOpen = $state(false);
   let editingTask = $state<Task | null>(null);
@@ -57,6 +105,36 @@
 
   $effect(() => {
     loadTasks();
+  });
+
+  $effect(() => {
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.metaKey && e.key === 'n') {
+        e.preventDefault();
+        handleAddClick();
+        return;
+      }
+      if (e.key === '?' && !modalOpen && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        searchInput?.focus();
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  });
+
+  // Global shortcut: Ctrl+Option+Cmd+N to open new task from anywhere
+  const GLOBAL_SHORTCUT = 'ctrl+alt+super+n';
+  $effect(() => {
+    register(GLOBAL_SHORTCUT, async (event) => {
+      if (event.state === 'Pressed') {
+        const win = getCurrentWindow();
+        await win.show();
+        await win.setFocus();
+        handleAddClick();
+      }
+    }).catch((err) => console.error('Failed to register global shortcut:', err));
+    return () => { unregister(GLOBAL_SHORTCUT).catch(() => {}); };
   });
 
   async function loadTasks() {
@@ -93,6 +171,7 @@
     editingTask = task;
     taskName = task.name ?? '';
     taskDetails = task.details ?? '';
+    confirmingDelete = false;
     modalOpen = true;
   }
 
@@ -134,23 +213,44 @@
     modalOpen = false;
   }
 
-  async function handleDelete() {
+  let confirmingDelete = $state(false);
+
+  function handleDelete() {
+    confirmingDelete = true;
+  }
+
+  async function confirmDelete() {
     if (!editingTask) return;
     await deleteTask(editingTask.id);
     await loadTasks();
+    confirmingDelete = false;
     modalOpen = false;
+  }
+
+  function cancelDelete() {
+    confirmingDelete = false;
   }
 </script>
 
-<div class="min-h-screen bg-background pb-24">
-  <div class="mx-auto max-w-2xl px-4 py-6">
+<div class="min-h-screen bg-muted pb-24">
+  <div class="w-full px-4 py-6">
     {#if loading}
       <div class="flex items-center justify-center py-12">
         <p class="text-muted-foreground text-sm">Loading tasks...</p>
       </div>
     {:else}
+      <!-- Search -->
+      <div class="mb-4">
+        <Input
+          bind:value={searchQuery}
+          bind:ref={searchInput}
+          placeholder="Filter tasks... (press ? to focus)"
+          class="bg-background"
+        />
+      </div>
+
       <!-- Current Tasks -->
-      <section class="mb-8">
+      <section class="mb-8 rounded-lg bg-green-500/[0.07] p-4 dark:bg-green-400/[0.1]">
         <h2 class="mb-4 text-lg font-semibold text-foreground">Current Tasks</h2>
         {#if openItems.length === 0}
           <div class="py-16 text-center">
@@ -158,21 +258,21 @@
           </div>
         {:else}
           <div
-            class="flex flex-col gap-3"
-            use:dndzone={{ items: openItems, flipDurationMs: 200 }}
+            class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
+            use:dndzone={{ items: openItems, flipDurationMs: 200, type: DND_TYPE }}
             onconsider={handleDndConsider}
             onfinalize={handleDndFinalize}
           >
             {#each openItems as task (task.id)}
               <div animate:flip={{ duration: 200 }} transition:slide={{ duration: 200 }}>
                 <Card
-                  class="cursor-pointer transition-colors hover:bg-accent/50"
+                  class="aspect-[5/4] cursor-pointer overflow-hidden bg-background transition-colors hover:bg-accent/50"
                   onclick={() => handleTaskClick(task)}
                 >
                   <CardHeader class="pb-0">
                     <CardTitle class="text-sm">{getTaskTitle(task)}</CardTitle>
                     {#if getTruncatedDetails(task)}
-                      <CardDescription class="line-clamp-2 text-xs">
+                      <CardDescription class="line-clamp-4 text-xs">
                         {getTruncatedDetails(task)}
                       </CardDescription>
                     {/if}
@@ -189,10 +289,53 @@
         {/if}
       </section>
 
-      <!-- Completed Task Buckets -->
-      {#if completedBuckets.length > 0}
-        {#each visibleBuckets as bucket (bucket.label)}
-          <section class="mb-6" transition:slide={{ duration: 200 }}>
+      <!-- Today bucket (drop target) -->
+      <section class="mb-6 rounded-lg p-4 bg-blue-500/[0.07] dark:bg-blue-400/[0.1]">
+        <button
+          class="mb-3 flex w-full items-center gap-2 text-left"
+          onclick={() => toggleBucket('Today')}
+        >
+          <span class="text-xs text-muted-foreground/70 transition-transform {collapsedBuckets['Today'] ? '' : 'rotate-90'}">&#9654;</span>
+          <h3 class="text-sm font-medium text-muted-foreground">Today</h3>
+          <span class="text-xs text-muted-foreground/70">({todayItems.length})</span>
+        </button>
+        {#if !collapsedBuckets['Today']}
+          <div
+            class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 min-h-[60px]"
+            use:dndzone={{ items: todayItems, flipDurationMs: 200, type: DND_TYPE, dragDisabled: true }}
+            onconsider={handleTodayConsider}
+            onfinalize={handleTodayFinalize}
+          >
+            {#each todayItems as task (task.id)}
+              <div animate:flip={{ duration: 200 }}>
+                <Card
+                  class="aspect-[5/4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
+                  onclick={() => handleTaskClick(task)}
+                >
+                  <CardHeader class="pb-0">
+                    <CardTitle class="text-sm text-muted-foreground">{getTaskTitle(task)}</CardTitle>
+                    {#if getTruncatedDetails(task)}
+                      <CardDescription class="line-clamp-4 text-xs">
+                        {getTruncatedDetails(task)}
+                      </CardDescription>
+                    {/if}
+                  </CardHeader>
+                  <CardContent class="pt-0">
+                    <span class="text-muted-foreground/70 text-[11px]">
+                      {formatTimestamp(task.closed_at)}
+                    </span>
+                  </CardContent>
+                </Card>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </section>
+
+      <!-- Other Completed Buckets -->
+      {#if otherBuckets.length > 0}
+        {#each visibleOtherBuckets as bucket (bucket.label)}
+          <section class="mb-6 rounded-lg p-4 {bucket.label === 'Yesterday' ? 'bg-blue-500/[0.07] dark:bg-blue-400/[0.1]' : 'bg-black/[0.04] dark:bg-white/[0.04]'}" transition:slide={{ duration: 200 }}>
             <button
               class="mb-3 flex w-full items-center gap-2 text-left"
               onclick={() => toggleBucket(bucket.label)}
@@ -202,16 +345,16 @@
               <span class="text-xs text-muted-foreground/70">({bucket.tasks.length})</span>
             </button>
             {#if !collapsedBuckets[bucket.label]}
-              <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
                 {#each bucket.tasks as task (task.id)}
                   <Card
-                    class="cursor-pointer opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
+                    class="aspect-[5/4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
                     onclick={() => handleTaskClick(task)}
                   >
                     <CardHeader class="pb-0">
                       <CardTitle class="text-sm text-muted-foreground">{getTaskTitle(task)}</CardTitle>
                       {#if getTruncatedDetails(task)}
-                        <CardDescription class="line-clamp-2 text-xs">
+                        <CardDescription class="line-clamp-4 text-xs">
                           {getTruncatedDetails(task)}
                         </CardDescription>
                       {/if}
@@ -227,17 +370,13 @@
             {/if}
           </section>
         {/each}
-        {#if hasMoreBuckets}
+        {#if hasMoreOtherBuckets}
           <div class="py-4 text-center">
             <Button variant="outline" onclick={loadMoreBuckets}>
               Show older
             </Button>
           </div>
         {/if}
-      {:else}
-        <div class="py-16 text-center">
-          <p class="text-muted-foreground text-sm">Nothing here</p>
-        </div>
       {/if}
     {/if}
   </div>
@@ -277,14 +416,21 @@
 
     <DialogFooter>
       {#if editingTask}
-        <Button variant="destructive" onclick={handleDelete}>Delete</Button>
-        <div class="flex-1"></div>
-        {#if editingTask.closed_at}
-          <Button variant="outline" onclick={handleReopen}>Reopen</Button>
+        {#if confirmingDelete}
+          <span class="text-sm text-destructive">Delete this task?</span>
+          <div class="flex-1"></div>
+          <Button variant="outline" onclick={cancelDelete}>Cancel</Button>
+          <Button variant="destructive" onclick={confirmDelete}>Confirm</Button>
         {:else}
-          <Button variant="outline" onclick={handleComplete}>Complete</Button>
+          <Button variant="destructive" onclick={handleDelete}>Delete</Button>
+          <div class="flex-1"></div>
+          {#if editingTask.closed_at}
+            <Button variant="outline" onclick={handleReopen}>Reopen</Button>
+          {:else}
+            <Button variant="outline" onclick={handleComplete}>Complete</Button>
+          {/if}
+          <Button onclick={handleSave}>Save</Button>
         {/if}
-        <Button onclick={handleSave}>Save</Button>
       {:else}
         <Button onclick={handleCreate}>Create</Button>
       {/if}

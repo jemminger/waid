@@ -1,6 +1,9 @@
 <script lang="ts">
 	import "../app.css";
 	import { getTheme, applyTheme, toggleTheme } from "$lib/theme";
+	import { initWindowState } from "$lib/window-state";
+	import Sun from "@lucide/svelte/icons/sun";
+	import Moon from "@lucide/svelte/icons/moon";
 
 	let { children } = $props();
 	let dark = $state(false);
@@ -11,6 +14,10 @@
 		applyTheme(theme);
 	});
 
+	$effect(() => {
+		initWindowState();
+	});
+
 	function handleToggle() {
 		const next = toggleTheme();
 		dark = next === "dark";
@@ -19,9 +26,14 @@
 
 <button
 	onclick={handleToggle}
-	class="fixed top-4 right-4 z-50 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-accent"
+	class="fixed top-4 right-4 z-50 rounded-full border border-border bg-background p-2 text-foreground shadow-sm hover:bg-accent"
+	aria-label="Toggle dark mode"
 >
-	{dark ? "Light" : "Dark"}
+	{#if dark}
+		<Sun size={18} />
+	{:else}
+		<Moon size={18} />
+	{/if}
 </button>
 
 {@render children()}
