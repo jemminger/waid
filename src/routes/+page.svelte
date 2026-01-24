@@ -3,6 +3,7 @@
   import { dndzone } from 'svelte-dnd-action';
   import { slide } from 'svelte/transition';
   import { flip } from 'svelte/animate';
+  import { flipResize } from '$lib/flip-resize';
   import groupCompletedTasks, { getOpenTasks } from '$lib/buckets';
   import { formatTimestamp } from '$lib/dates';
   import type { Task } from '$lib/types';
@@ -256,6 +257,7 @@
           <div
             class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
             use:dndzone={{ items: openItems, flipDurationMs: 200, type: DND_TYPE }}
+            use:flipResize={{ duration: 200 }}
             onconsider={handleDndConsider}
             onfinalize={handleDndFinalize}
           >
@@ -299,6 +301,7 @@
           <div
             class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 min-h-[60px]"
             use:dndzone={{ items: todayItems, flipDurationMs: 200, type: DND_TYPE, dragDisabled: true }}
+            use:flipResize={{ duration: 200 }}
             onconsider={handleTodayConsider}
             onfinalize={handleTodayFinalize}
           >
@@ -341,7 +344,7 @@
               <span class="text-xs text-muted-foreground/70">({bucket.tasks.length})</span>
             </button>
             {#if !collapsedBuckets[bucket.label]}
-              <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2" use:flipResize={{ duration: 200 }}>
                 {#each bucket.tasks as task (task.id)}
                   <Card
                     class="aspect-[5/4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
