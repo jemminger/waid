@@ -104,10 +104,12 @@
   let editingTask = $state<Task | null>(null);
   let taskName = $state('');
   let taskDetails = $state('');
+  let nameInputRef = $state<HTMLInputElement | null>(null);
 
   $effect(() => {
     loadTasks();
   });
+
 
   $effect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -394,7 +396,7 @@
 
 <!-- Task Modal -->
 <Dialog bind:open={modalOpen}>
-  <DialogContent>
+  <DialogContent onOpenAutoFocus={(e) => { e.preventDefault(); nameInputRef?.focus(); }}>
     <DialogHeader>
       <DialogTitle>{editingTask ? 'Edit Task' : 'New Task'}</DialogTitle>
       <DialogDescription class="sr-only">
@@ -405,12 +407,13 @@
     <div class="flex flex-col gap-4 py-2">
       <Input
         bind:value={taskName}
+        bind:ref={nameInputRef}
         placeholder="Task name (optional)"
       />
       <Textarea
         bind:value={taskDetails}
         placeholder="Details..."
-        rows={6}
+        rows={8}
       />
     </div>
 
@@ -425,14 +428,14 @@
             </div>
           </div>
         {:else}
-          <Button variant="destructive" onclick={handleDelete}>Delete</Button>
-          <div class="flex-1"></div>
+          <Button onclick={handleSave} class="order-last">Save</Button>
           {#if editingTask.closed_at}
-            <Button variant="outline" onclick={handleReopen}>Reopen</Button>
+            <Button variant="outline" onclick={handleReopen} class="order-3">Reopen</Button>
           {:else}
-            <Button variant="outline" onclick={handleComplete}>Complete</Button>
+            <Button variant="outline" onclick={handleComplete} class="order-3">Complete</Button>
           {/if}
-          <Button onclick={handleSave}>Save</Button>
+          <div class="order-2 flex-1"></div>
+          <Button variant="destructive" onclick={handleDelete} tabindex={-1} class="order-1">Delete</Button>
         {/if}
       {:else}
         <Button onclick={handleCreate}>Create</Button>
