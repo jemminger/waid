@@ -113,7 +113,9 @@ async function initialize(): Promise<Database> {
   for (const sql of MIGRATIONS) {
     await db.execute(sql);
   }
-  await seedSampleData(db);
+  if (import.meta.env.DEV) {
+    await seedSampleData(db);
+  }
 
   return db;
 }
