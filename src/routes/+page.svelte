@@ -7,8 +7,7 @@
   import groupCompletedTasks, { getOpenTasks } from '$lib/buckets';
   import { formatTimestamp } from '$lib/dates';
   import type { Task } from '$lib/types';
-  import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
-  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { listen } from '@tauri-apps/api/event';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -127,18 +126,12 @@
     return () => window.removeEventListener('keydown', handleKeydown);
   });
 
-  // Global shortcut: Ctrl+Option+Cmd+N to open new task from anywhere
-  const GLOBAL_SHORTCUT = 'ctrl+alt+super+n';
+  // Listen for global shortcut event from Rust backend
   $effect(() => {
-    register(GLOBAL_SHORTCUT, async (event) => {
-      if (event.state === 'Pressed') {
-        const win = getCurrentWindow();
-        await win.show();
-        await win.setFocus();
-        handleAddClick();
-      }
-    }).catch((err) => console.error('Failed to register global shortcut:', err));
-    return () => { unregister(GLOBAL_SHORTCUT).catch(() => {}); };
+    const unlisten = listen('global-shortcut-new-task', () => {
+      handleAddClick();
+    });
+    return () => { unlisten.then((fn) => fn()); };
   });
 
   async function loadTasks() {
