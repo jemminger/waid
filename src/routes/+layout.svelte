@@ -26,13 +26,13 @@
 
 <button
 	onclick={handleToggle}
-	class="fixed top-4 right-4 z-50 rounded-full border border-border bg-background p-2 text-foreground shadow-sm hover:bg-accent"
+	class="fixed bottom-6 left-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-lg hover:bg-accent"
 	aria-label="Toggle dark mode"
 >
 	{#if dark}
-		<Sun size={18} />
+		<Sun size={24} />
 	{:else}
-		<Moon size={18} />
+		<Moon size={24} />
 	{/if}
 </button>
 
