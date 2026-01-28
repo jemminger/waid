@@ -20,8 +20,7 @@ function getBucketKey(closedAt: Date, now: Date): string {
   return format(closedAt, 'MMMM yyyy');
 }
 
-export default function groupCompletedTasks(tasks: Task[]): Bucket[] {
-  const now = new Date();
+export default function groupCompletedTasks(tasks: Task[], now: Date = new Date()): Bucket[] {
   const closedTasks = tasks.filter((t) => t.closed_at != null);
 
   const bucketMap = new Map<string, { label: string; tasks: Task[]; sortDate: Date }>();

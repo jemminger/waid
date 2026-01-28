@@ -25,8 +25,15 @@
     return (task.name?.toLowerCase().includes(q) ?? false) || task.details.toLowerCase().includes(q);
   }
 
+  // Periodic time update so buckets refresh at day boundaries
+  let now = $state(new Date());
+  $effect(() => {
+    const interval = setInterval(() => { now = new Date(); }, 60_000);
+    return () => clearInterval(interval);
+  });
+
   let filteredTasks = $derived(tasks.filter(matchesSearch));
-  let completedBuckets = $derived(groupCompletedTasks(filteredTasks));
+  let completedBuckets = $derived(groupCompletedTasks(filteredTasks, now));
 
   // Infinite scroll: limit visible buckets
   const BUCKETS_PER_PAGE = 5;
