@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { execSync } = require('child_process');
 const arg = process.argv[2];
 
 if (!arg) {
@@ -25,5 +26,8 @@ for (const f of ['package.json', 'src-tauri/tauri.conf.json']) {
 
 const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
 fs.writeFileSync('src-tauri/Cargo.toml', cargo.replace(/^version = ".*"/m, `version = "${v}"`));
+
+// Regenerate Cargo.lock to reflect the new version
+execSync('cargo generate-lockfile', { cwd: 'src-tauri', stdio: 'inherit' });
 
 console.log(`${pkg.version} → ${v}`);
