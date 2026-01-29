@@ -40,10 +40,29 @@ try {
   runLoud(`git push origin ${tag}`);
 }
 
-// Wait for the release workflow to complete
-console.log(`Waiting for release workflow to finish...`);
+// Wait for the release workflow run to appear, then watch it
+console.log(`Waiting for release workflow to start...`);
+let runId;
+for (let i = 0; i < 30; i++) {
+  const result = run(`gh run list --workflow=release.yml --branch=${tag} --limit=1 --json databaseId,status --jq '.[0]'`);
+  if (result) {
+    const parsed = JSON.parse(result);
+    if (parsed.databaseId) {
+      runId = parsed.databaseId;
+      break;
+    }
+  }
+  execSync('sleep 2');
+}
+
+if (!runId) {
+  console.error('Timed out waiting for release workflow to start.');
+  process.exit(1);
+}
+
+console.log(`Watching run ${runId}...`);
 try {
-  runLoud(`gh run watch --exit-status $(gh run list --workflow=release.yml --branch=${tag} --limit=1 --json databaseId --jq '.[0].databaseId')`);
+  runLoud(`gh run watch ${runId} --exit-status`);
 } catch {
   console.error('Release workflow failed. Check GitHub Actions for details.');
   process.exit(1);
