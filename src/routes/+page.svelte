@@ -463,7 +463,14 @@
 
 <!-- Task Modal -->
 <Dialog bind:open={modalOpen}>
-  <DialogContent onOpenAutoFocus={(e) => { e.preventDefault(); nameInputRef?.focus(); }}>
+  <DialogContent onOpenAutoFocus={(e) => { e.preventDefault(); nameInputRef?.focus(); }}
+    onkeydown={(e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (editingTask) handleSave();
+        else handleCreate();
+      }
+    }}>
     <DialogHeader>
       <DialogTitle>{editingTask ? 'Edit Task' : 'New Task'}</DialogTitle>
       <DialogDescription class="sr-only">
