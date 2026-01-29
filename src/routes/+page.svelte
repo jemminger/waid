@@ -9,16 +9,32 @@
   import type { Task } from '$lib/types';
   import { listen } from '@tauri-apps/api/event';
   import { checkForUpdates } from '$lib/updater';
+  import { getTheme, toggleTheme } from '$lib/theme';
+  import { exportDb, importDb, resetDb } from '$lib/settings';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Settings from '@lucide/svelte/icons/settings';
+
+  const APP_VERSION = '0.1.0';
+  const GITHUB_URL = 'https://github.com/jemminger/waid';
 
   let tasks = $state<Task[]>([]);
   let loading = $state(true);
   let searchQuery = $state('');
   let searchInput = $state<HTMLInputElement | null>(null);
+  let dark = $state(getTheme() === 'dark');
+
+  function handleToggleTheme() {
+    const next = toggleTheme();
+    dark = next === 'dark';
+  }
 
   function matchesSearch(task: Task): boolean {
     if (!searchQuery.trim()) return true;
@@ -106,12 +122,16 @@
     await loadTasks();
   }
 
-  // Modal state
+  // Task modal state
   let modalOpen = $state(false);
   let editingTask = $state<Task | null>(null);
   let taskName = $state('');
   let taskDetails = $state('');
   let nameInputRef = $state<HTMLInputElement | null>(null);
+
+  // Settings dialog state
+  let settingsOpen = $state(false);
+  let confirmingReset = $state(false);
 
   $effect(() => {
     loadTasks();
@@ -131,7 +151,7 @@
         handleAddClick();
         return;
       }
-      if (e.key === '?' && !modalOpen && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+      if (e.key === '?' && !modalOpen && !settingsOpen && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault();
         searchInput?.focus();
       }
@@ -236,25 +256,63 @@
   function cancelDelete() {
     confirmingDelete = false;
   }
+
+  // Settings actions
+  async function handleExportDb() {
+    await exportDb();
+  }
+
+  async function handleImportDb() {
+    await importDb();
+  }
+
+  async function handleResetDb() {
+    confirmingReset = true;
+  }
+
+  async function confirmReset() {
+    await resetDb();
+  }
+
+  function cancelReset() {
+    confirmingReset = false;
+  }
+
+  async function handleOpenGitHub() {
+    await openUrl(GITHUB_URL);
+  }
 </script>
 
-<div class="min-h-screen bg-muted pb-24">
-  <div class="w-full px-4 py-6">
+<div class="min-h-screen bg-muted">
+  <!-- Top Nav Bar -->
+  <div class="sticky top-0 z-40 flex items-center gap-2 border-b border-border bg-background px-4 py-2">
+    <Input
+      bind:value={searchQuery}
+      bind:ref={searchInput}
+      placeholder="Filter tasks... (? to focus)"
+      class="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0"
+    />
+    <Button variant="ghost" size="icon" onclick={handleAddClick} aria-label="New task">
+      <Plus size={18} />
+    </Button>
+    <Button variant="ghost" size="icon" onclick={handleToggleTheme} aria-label="Toggle dark mode">
+      {#if dark}
+        <Sun size={18} />
+      {:else}
+        <Moon size={18} />
+      {/if}
+    </Button>
+    <Button variant="ghost" size="icon" onclick={() => { confirmingReset = false; settingsOpen = true; }} aria-label="Settings">
+      <Settings size={18} />
+    </Button>
+  </div>
+
+  <div class="w-full px-4 py-6 pb-12">
     {#if loading}
       <div class="flex items-center justify-center py-12">
         <p class="text-muted-foreground text-sm">Loading tasks...</p>
       </div>
     {:else}
-      <!-- Search -->
-      <div class="mb-4">
-        <Input
-          bind:value={searchQuery}
-          bind:ref={searchInput}
-          placeholder="Filter tasks... (press ? to focus)"
-          class="bg-background"
-        />
-      </div>
-
       <!-- Current Tasks -->
       <section class="mb-8 rounded-lg bg-green-500/[0.07] p-4 dark:bg-green-400/[0.1]">
         <h2 class="mb-4 text-lg font-semibold text-foreground">Current Tasks</h2>
@@ -388,17 +446,6 @@
       {/if}
     {/if}
   </div>
-
-  <!-- Floating Add Button -->
-  <div class="fixed bottom-6 right-6">
-    <Button
-      size="icon-lg"
-      class="h-14 w-14 rounded-full shadow-lg text-xl"
-      onclick={handleAddClick}
-    >
-      +
-    </Button>
-  </div>
 </div>
 
 <!-- Task Modal -->
@@ -448,5 +495,78 @@
         <Button onclick={handleCreate}>Create</Button>
       {/if}
     </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<!-- Settings Dialog -->
+<Dialog bind:open={settingsOpen}>
+  <DialogContent class="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Settings</DialogTitle>
+      <DialogDescription class="sr-only">Application settings</DialogDescription>
+    </DialogHeader>
+
+    <div class="flex flex-col gap-6 py-2">
+      <!-- Appearance -->
+      <section>
+        <h3 class="mb-3 text-sm font-medium text-foreground">Appearance</h3>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-muted-foreground">Dark mode</span>
+          <Button variant="outline" size="sm" onclick={handleToggleTheme}>
+            {#if dark}
+              <Sun size={14} class="mr-1.5" />
+              Switch to light
+            {:else}
+              <Moon size={14} class="mr-1.5" />
+              Switch to dark
+            {/if}
+          </Button>
+        </div>
+      </section>
+
+      <hr class="border-border" />
+
+      <!-- Data -->
+      <section>
+        <h3 class="mb-3 text-sm font-medium text-foreground">Data</h3>
+        <div class="flex flex-col gap-2">
+          <Button variant="outline" size="sm" class="justify-start" onclick={handleImportDb}>
+            Import database
+          </Button>
+          <Button variant="outline" size="sm" class="justify-start" onclick={handleExportDb}>
+            Export database
+          </Button>
+          {#if confirmingReset}
+            <div class="flex flex-col items-center gap-2 rounded-md border border-destructive/50 p-3">
+              <span class="text-sm text-destructive">This will delete all data and restart the app.</span>
+              <div class="flex gap-2">
+                <Button variant="outline" size="sm" onclick={cancelReset}>Cancel</Button>
+                <Button variant="destructive" size="sm" onclick={confirmReset}>Confirm reset</Button>
+              </div>
+            </div>
+          {:else}
+            <Button variant="outline" size="sm" class="justify-start text-destructive hover:text-destructive" onclick={handleResetDb}>
+              Reset database
+            </Button>
+          {/if}
+        </div>
+      </section>
+
+      <hr class="border-border" />
+
+      <!-- About -->
+      <section>
+        <h3 class="mb-3 text-sm font-medium text-foreground">About</h3>
+        <div class="flex flex-col gap-1.5 text-sm text-muted-foreground">
+          <span>waid v{APP_VERSION}</span>
+          <button
+            class="text-left text-primary hover:underline"
+            onclick={handleOpenGitHub}
+          >
+            {GITHUB_URL}
+          </button>
+        </div>
+      </section>
+    </div>
   </DialogContent>
 </Dialog>
