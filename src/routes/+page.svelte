@@ -12,6 +12,7 @@
   import { getTheme, toggleTheme } from '$lib/theme';
   import { exportDb, importDb, resetDb } from '$lib/settings';
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import { getVersion } from '@tauri-apps/api/app';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -22,8 +23,12 @@
   import Moon from '@lucide/svelte/icons/moon';
   import Settings from '@lucide/svelte/icons/settings';
 
-  const APP_VERSION = '0.1.0';
   const GITHUB_URL = 'https://github.com/jemminger/waid';
+
+  let appVersion = $state('');
+  $effect(() => {
+    getVersion().then(v => { appVersion = v; });
+  });
 
   let tasks = $state<Task[]>([]);
   let loading = $state(true);
@@ -564,7 +569,7 @@
       <section>
         <h3 class="mb-3 text-sm font-medium text-foreground">About</h3>
         <div class="flex flex-col gap-1.5 text-sm text-muted-foreground">
-          <span>waid v{APP_VERSION}</span>
+          <span>waid v{appVersion}</span>
           <button
             class="text-left text-primary hover:underline"
             onclick={handleOpenGitHub}
