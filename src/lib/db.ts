@@ -2,21 +2,65 @@ import Database from '@tauri-apps/plugin-sql';
 
 let db: Database | null = null;
 
-const MIGRATIONS = [
-  `CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    details TEXT NOT NULL DEFAULT '',
-    position REAL NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    closed_at TEXT
-  )`,
-  `CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  )`
+// Each entry is a migration version (index 0 = version 1).
+// Each migration is an array of SQL statements run sequentially.
+// To add a new migration, append a new array entry.
+const MIGRATIONS: string[][] = [
+  // Version 1: Initial schema
+  [
+    `CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      details TEXT NOT NULL DEFAULT '',
+      position REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+      updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+      closed_at TEXT
+    )`,
+  ],
 ];
+
+async function getSchemaVersion(database: Database): Promise<number> {
+  const tables = await database.select<{ name: string }[]>(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='settings'`
+  );
+  if (tables.length === 0) return 0;
+
+  const rows = await database.select<{ value: string }[]>(
+    `SELECT value FROM settings WHERE key = 'schema_version'`
+  );
+  if (rows.length === 0) return 0;
+  return parseInt(rows[0].value, 10);
+}
+
+async function setSchemaVersion(database: Database, version: number): Promise<void> {
+  await database.execute(
+    `INSERT INTO settings (key, value) VALUES ('schema_version', ?)
+     ON CONFLICT(key) DO UPDATE SET value = ?`,
+    [String(version), String(version)]
+  );
+}
+
+async function runMigrations(database: Database): Promise<void> {
+  const currentVersion = await getSchemaVersion(database);
+
+  for (let i = currentVersion; i < MIGRATIONS.length; i++) {
+    const statements = MIGRATIONS[i];
+    console.log(`Running migration to version ${i + 1}...`);
+    for (const sql of statements) {
+      try {
+        await database.execute(sql);
+      } catch (e) {
+        console.warn(`Migration statement warning:`, e);
+      }
+    }
+    await setSchemaVersion(database, i + 1);
+  }
+}
 
 async function seedSampleData(database: Database): Promise<void> {
   const result = await database.select<{ count: number }[]>('SELECT COUNT(*) as count FROM tasks');
@@ -110,9 +154,7 @@ async function initialize(): Promise<Database> {
   if (db) return db;
 
   db = await Database.load('sqlite:waid.db');
-  for (const sql of MIGRATIONS) {
-    await db.execute(sql);
-  }
+  await runMigrations(db);
   if (import.meta.env.DEV) {
     await seedSampleData(db);
   }
