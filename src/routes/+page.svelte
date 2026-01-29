@@ -8,6 +8,7 @@
   import { formatTimestamp } from '$lib/dates';
   import type { Task } from '$lib/types';
   import { listen } from '@tauri-apps/api/event';
+  import { checkForUpdates } from '$lib/updater';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -114,6 +115,12 @@
 
   $effect(() => {
     loadTasks();
+  });
+
+  // Check for updates silently after startup
+  $effect(() => {
+    const timeout = setTimeout(() => checkForUpdates(true), 3000);
+    return () => clearTimeout(timeout);
   });
 
 
