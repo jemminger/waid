@@ -15,7 +15,10 @@
     "test:watch": "vitest",
     "version:bump": "node scripts/version-bump.cjs",
     "version:push": "git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml && git commit -m \"Bump version to $(node -p 'require(\"./package.json\").version')\" && git tag v$(node -p 'require(\"./package.json\").version') && git push && git push --tags",
-    "release": "node scripts/release.cjs"
+    "release": "node scripts/release.cjs",
+    "release:M": "bun run version:bump M && bun run version:push && bun run release",
+    "release:m": "bun run version:bump m && bun run version:push && bun run release",
+    "release:p": "bun run version:bump p && bun run version:push && bun run release"
   },
   "license": "MIT",
   "dependencies": {
