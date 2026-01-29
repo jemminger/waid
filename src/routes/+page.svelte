@@ -13,6 +13,7 @@
   import { exportDb, importDb, resetDb } from '$lib/settings';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { getVersion } from '@tauri-apps/api/app';
+  import { cloak } from '$lib/cloak.svelte';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -186,6 +187,7 @@
       console.error('Failed to load tasks:', err);
     } finally {
       loading = false;
+      cloak.markTasksReady();
     }
   }
 

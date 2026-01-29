@@ -1,6 +1,7 @@
 import { getCurrentWindow, availableMonitors } from '@tauri-apps/api/window';
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi';
 import { getDb } from './db';
+import { cloak } from './cloak.svelte';
 
 interface WindowState {
   x: number;
@@ -68,6 +69,8 @@ export async function initWindowState(): Promise<void> {
     await win.setPosition(new LogicalPosition(state.x / scale, state.y / scale));
     await win.setSize(new LogicalSize(state.width / scale, state.height / scale));
   }
+
+  cloak.markWindowReady();
 
   win.onMoved(async ({ payload }) => {
     const size = await win.outerSize();
