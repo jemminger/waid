@@ -25,18 +25,10 @@
     "core:path:default",
     "dialog:allow-save",
     "dialog:allow-open",
-    {
-      "identifier": "fs:allow-read",
-      "allow": [{ "path": "$APPDATA/**" }]
-    },
-    {
-      "identifier": "fs:allow-write",
-      "allow": [{ "path": "$APPDATA/**" }]
-    },
-    {
-      "identifier": "fs:allow-remove",
-      "allow": [{ "path": "$APPDATA/**" }]
-    },
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-meta",
+    "fs:allow-remove",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA/**" }]

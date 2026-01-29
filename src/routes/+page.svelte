@@ -146,6 +146,12 @@
 
   $effect(() => {
     function handleKeydown(e: KeyboardEvent) {
+      if (e.metaKey && e.key === ',') {
+        e.preventDefault();
+        confirmingReset = false;
+        settingsOpen = !settingsOpen;
+        return;
+      }
       if (e.metaKey && e.key === 'n') {
         e.preventDefault();
         handleAddClick();
