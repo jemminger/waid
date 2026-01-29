@@ -12,7 +12,9 @@
     "tauri": "tauri",
     "db:reset": "rm -f \"$HOME/Library/Application Support/com.jemminger.waid/waid.db\" && echo 'Database reset. Restart the app to reseed.'",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version:bump": "node -e \"const v=process.argv[1];if(!v){console.error('Usage: bun run version:bump <version>');process.exit(1)}const fs=require('fs');for(const f of['package.json','src-tauri/tauri.conf.json']){const j=JSON.parse(fs.readFileSync(f));j.version=v;fs.writeFileSync(f,JSON.stringify(j,null,2)+'\\n')}const c=fs.readFileSync('src-tauri/Cargo.toml','utf8');fs.writeFileSync('src-tauri/Cargo.toml',c.replace(/^version = \\\".*\\\"/m,'version = \\\"'+v+'\\\"'));console.log('Bumped to '+v)\" --",
+    "version:push": "git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml && git commit -m \"Bump version to $(node -p require('./package.json').version)\" && git tag v$(node -p require('./package.json').version) && git push && git push --tags"
   },
   "license": "MIT",
   "dependencies": {
