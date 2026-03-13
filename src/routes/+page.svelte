@@ -350,7 +350,7 @@
                   <CardHeader class="pb-0">
                     <CardTitle class="text-sm">{getTaskTitle(task)}</CardTitle>
                     {#if getTruncatedDetails(task)}
-                      <CardDescription class="line-clamp-4 text-xs">
+                      <CardDescription class="line-clamp-4 whitespace-pre-line text-xs">
                         {getTruncatedDetails(task)}
                       </CardDescription>
                     {/if}
@@ -394,7 +394,7 @@
                   <CardHeader class="pb-0">
                     <CardTitle class="text-sm text-muted-foreground">{getTaskTitle(task)}</CardTitle>
                     {#if getTruncatedDetails(task)}
-                      <CardDescription class="line-clamp-4 text-xs">
+                      <CardDescription class="line-clamp-4 whitespace-pre-line text-xs">
                         {getTruncatedDetails(task)}
                       </CardDescription>
                     {/if}
