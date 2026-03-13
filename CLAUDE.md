@@ -22,9 +22,24 @@ bun run check
 
 # Frontend-only dev server (no Tauri window, useful for UI work)
 bun run dev
+
+# Run tests
+bun run test
 ```
 
 Note: `tauri.conf.json` uses `bun` for before-dev/before-build commands.
+
+## Releasing
+
+Use the release scripts to bump version, commit, tag, push, and build:
+
+```bash
+yarn release:M   # bump major (e.g. 0.5.0 → 1.0.0)
+yarn release:m   # bump minor (e.g. 0.4.4 → 0.5.0)
+yarn release:p   # bump patch (e.g. 0.4.4 → 0.4.5)
+```
+
+These update the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, then commit, tag, push, and trigger the release build. **Do not manually bump versions.**
 
 ## Architecture
 
