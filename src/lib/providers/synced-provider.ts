@@ -20,7 +20,6 @@ export class SyncedProvider implements TaskProvider {
 
   constructor(uid: string) {
     this.uid = uid;
-    this.startListener();
   }
 
   private tasksCollection() {
@@ -55,7 +54,13 @@ export class SyncedProvider implements TaskProvider {
   }
 
   private startListener() {
+    let initialLoad = true;
     this.unsubscribeSnapshot = onSnapshot(this.tasksCollection(), async (snapshot) => {
+      // Skip the initial snapshot — we already have local data in sync
+      if (initialLoad) {
+        initialLoad = false;
+        return;
+      }
       this.processingRemote = true;
       try {
         const db = await getDb();
@@ -228,6 +233,9 @@ export class SyncedProvider implements TaskProvider {
         await db.execute('UPDATE tasks SET sync_id = ? WHERE id = ?', [task.sync_id, task.id]);
       }
     }
+
+    // Start listening for remote changes only after all sync_ids are saved
+    this.startListener();
   }
 
   destroy() {

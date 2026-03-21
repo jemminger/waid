@@ -1,0 +1,25 @@
+{
+  "identifier": "mobile",
+  "description": "Capability for mobile",
+  "windows": ["main"],
+  "platforms": ["android", "iOS"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "process:allow-restart",
+    "core:path:default",
+    "dialog:allow-open",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-meta",
+    "fs:allow-remove",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA/**" }]
+    },
+    "deep-link:default"
+  ]
+}

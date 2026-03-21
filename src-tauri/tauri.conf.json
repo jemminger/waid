@@ -37,7 +37,10 @@
     "deep-link": {
       "desktop": {
         "schemes": ["waid"]
-      }
+      },
+      "mobile": [
+        { "host": "waid-19eea.web.app", "pathPrefix": ["/auth-callback"] }
+      ]
     },
     "updater": {
       "endpoints": [

@@ -42,6 +42,7 @@
   let searchQuery = $state('');
   let searchInput = $state<HTMLInputElement | null>(null);
   let dark = $state(getTheme() === 'dark');
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   function handleToggleTheme() {
     const next = toggleTheme();
@@ -451,8 +452,8 @@
           </div>
         {:else}
           <div
-            class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
-            use:dndzone={{ items: openItems, flipDurationMs: 200, type: DND_TYPE }}
+            class="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
+            use:dndzone={{ items: openItems, flipDurationMs: 200, type: DND_TYPE, dragDisabled: isMobile }}
             use:flipResize={{ duration: 200 }}
             onconsider={handleDndConsider}
             onfinalize={handleDndFinalize}
@@ -460,7 +461,7 @@
             {#each openItems as task (task.id)}
               <div animate:flip={{ duration: 200 }} transition:slide={{ duration: 200 }}>
                 <Card
-                  class="aspect-[5/4] cursor-pointer overflow-hidden bg-background transition-colors hover:bg-accent/50"
+                  class="aspect-[5/4] max-sm:aspect-[5/2.4] cursor-pointer overflow-hidden bg-background transition-colors hover:bg-accent/50"
                   onclick={() => handleTaskClick(task)}
                 >
                   <CardHeader class="pb-0">
@@ -495,7 +496,7 @@
         </button>
         {#if !collapsedBuckets['Today']}
           <div
-            class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 min-h-[60px]"
+            class="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2 min-h-[60px]"
             use:dndzone={{ items: todayItems, flipDurationMs: 200, type: DND_TYPE, dragDisabled: true }}
             use:flipResize={{ duration: 200 }}
             onconsider={handleTodayConsider}
@@ -504,7 +505,7 @@
             {#each todayItems as task (task.id)}
               <div animate:flip={{ duration: 200 }}>
                 <Card
-                  class="aspect-[5/4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
+                  class="aspect-[5/4] max-sm:aspect-[5/2.4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
                   onclick={() => handleTaskClick(task)}
                 >
                   <CardHeader class="pb-0">
@@ -540,10 +541,10 @@
               <span class="text-xs text-muted-foreground/70">({bucket.tasks.length})</span>
             </button>
             {#if !collapsedBuckets[bucket.label]}
-              <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2" use:flipResize={{ duration: 200 }}>
+              <div class="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2" use:flipResize={{ duration: 200 }}>
                 {#each bucket.tasks as task (task.id)}
                   <Card
-                    class="aspect-[5/4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
+                    class="aspect-[5/4] max-sm:aspect-[5/2.4] cursor-pointer overflow-hidden bg-background opacity-70 transition-colors hover:opacity-90 hover:bg-accent/30"
                     onclick={() => handleTaskClick(task)}
                   >
                     <CardHeader class="pb-0">
