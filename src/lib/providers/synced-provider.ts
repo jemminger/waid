@@ -54,13 +54,8 @@ export class SyncedProvider implements TaskProvider {
   }
 
   private startListener() {
-    let initialLoad = true;
     this.unsubscribeSnapshot = onSnapshot(this.tasksCollection(), async (snapshot) => {
-      // Skip the initial snapshot — we already have local data in sync
-      if (initialLoad) {
-        initialLoad = false;
-        return;
-      }
+      if (snapshot.docChanges().length === 0) return;
       this.processingRemote = true;
       try {
         const db = await getDb();
