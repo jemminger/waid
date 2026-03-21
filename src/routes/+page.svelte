@@ -415,7 +415,7 @@
 
 <div class="min-h-screen bg-muted">
   <!-- Top Nav Bar -->
-  <div class="sticky top-0 z-40 flex items-center gap-2 border-b border-border bg-background px-4 py-2">
+  <div class="sticky top-0 z-40 flex items-center gap-2 border-b border-border bg-background px-4 py-2 pt-[env(safe-area-inset-top,0px)]">
     <Input
       bind:value={searchQuery}
       bind:ref={searchInput}

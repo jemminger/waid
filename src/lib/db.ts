@@ -158,7 +158,8 @@ async function seedSampleData(database: Database): Promise<void> {
 async function initialize(): Promise<Database> {
   if (db) return db;
 
-  db = await Database.load('sqlite:waid.db');
+  const dbName = import.meta.env.DEV ? 'waid-dev.db' : 'waid.db';
+  db = await Database.load(`sqlite:${dbName}`);
   await runMigrations(db);
   if (import.meta.env.DEV) {
     await seedSampleData(db);

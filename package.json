@@ -10,7 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
-    "db:reset": "rm -f \"$HOME/Library/Application Support/com.jemminger.waid/waid.db\" && echo 'Database reset. Restart the app to reseed.'",
+    "db:reset": "rm -f \"$HOME/Library/Application Support/com.jemminger.waid/waid.db\" \"$HOME/Library/Application Support/com.jemminger.waid/waid-dev.db\" && echo 'Database reset. Restart the app to reseed.'",
     "test": "vitest run",
     "test:watch": "vitest",
     "version:bump": "node scripts/version-bump.cjs",
