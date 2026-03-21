@@ -10,7 +10,7 @@ import { getFirebaseAuth } from './firebase';
 import { getSyncEmail, setSyncEmail } from './sync-settings';
 
 const ACTION_CODE_SETTINGS = {
-  url: 'https://YOUR_PROJECT.web.app/auth-callback',
+  url: 'https://waid-19eea.web.app/auth-callback',
   handleCodeInApp: true,
 };
 
