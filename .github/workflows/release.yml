@@ -51,3 +51,62 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  release-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;30.0.14904198"
+
+      - name: Set Android environment
+        run: |
+          echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.14904198" >> $GITHUB_ENV
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Set up keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/waid-release.keystore
+          cat > src-tauri/gen/android/app/keystore.properties << EOF
+          storeFile=/tmp/waid-release.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=waid
+          keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          EOF
+
+      - name: Initialize Android project
+        run: bun tauri android init
+
+      - name: Build Android APK
+        run: bun tauri android build
+
+      - name: Upload APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
