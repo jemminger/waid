@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>waid - Signing in...</title>
+  <style>
+    body { font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a1a; color: #ccc; }
+    .container { text-align: center; max-width: 400px; padding: 2rem; }
+    code { background: #333; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; word-break: break-all; }
+    a { color: #6ea8fe; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p id="status">Redirecting to waid...</p>
+    <p id="fallback" style="display:none">
+      If the app didn't open, copy this link and paste it into<br>
+      <strong>Settings &gt; Data Storage &gt; Paste sign-in link</strong>:<br><br>
+      <code id="link"></code>
+    </p>
+  </div>
+  <script>
+    const fullUrl = window.location.href;
+    const deepLink = 'waid://auth-callback?link=' + encodeURIComponent(fullUrl);
+
+    // Try to open the deep link
+    window.location.href = deepLink;
+
+    // After a short delay, show fallback instructions
+    setTimeout(() => {
+      document.getElementById('status').textContent = 'If waid didn\u2019t open automatically:';
+      document.getElementById('fallback').style.display = 'block';
+      document.getElementById('link').textContent = fullUrl;
+    }, 2000);
+  </script>
+</body>
+</html>

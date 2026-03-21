@@ -26,6 +26,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     created_at: '2024-06-15T12:00:00Z',
     updated_at: '2024-06-15T12:00:00Z',
     closed_at: null,
+    sync_id: null,
+    deleted_at: null,
     ...overrides,
   };
 }

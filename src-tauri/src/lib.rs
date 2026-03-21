@@ -17,8 +17,16 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![greet])
         .setup(|app| {
+            #[cfg(debug_assertions)]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_title("waid (dev)");
+                }
+            }
+
             let shortcut = Shortcut::new(
                 Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SUPER),
                 Code::KeyN,

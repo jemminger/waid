@@ -22,6 +22,11 @@ const MIGRATIONS: string[][] = [
       closed_at TEXT
     )`,
   ],
+  // Version 2: Sync support
+  [
+    `ALTER TABLE tasks ADD COLUMN sync_id TEXT`,
+    `ALTER TABLE tasks ADD COLUMN deleted_at TEXT`,
+  ],
 ];
 
 async function getSchemaVersion(database: Database): Promise<number> {

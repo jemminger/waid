@@ -17,6 +17,7 @@
     "core:window:allow-outer-position",
     "core:window:allow-set-size",
     "core:window:allow-set-position",
+    "core:window:allow-set-title",
     "core:window:allow-available-monitors",
     "updater:default",
     "updater:allow-check",
@@ -32,6 +33,7 @@
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA/**" }]
-    }
+    },
+    "deep-link:default"
   ]
 }
