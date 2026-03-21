@@ -14,6 +14,12 @@
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { getVersion } from '@tauri-apps/api/app';
   import { cloak } from '$lib/cloak.svelte';
+  import { getStorageMode, setStorageMode, getSyncEmail } from '$lib/sync-settings';
+  import { sendMagicLink, completeMagicLink, signOut, onAuthChange, checkForSignInLink } from '$lib/auth';
+  import { activateLocalProvider, activateSyncedProvider, getProvider } from '$lib/providers';
+  import type { StorageMode, AuthState, SyncStatus } from '$lib/types';
+  import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+  import { SyncedProvider } from '$lib/providers/synced-provider';
   import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '$lib/components/ui/card/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '$lib/components/ui/dialog/index.js';
@@ -138,6 +144,116 @@
   // Settings dialog state
   let settingsOpen = $state(false);
   let confirmingReset = $state(false);
+
+  // Data Storage / Sync state
+  let storageMode = $state<StorageMode>('local');
+  let authState = $state<AuthState>({ user: null, status: 'signed-out' });
+  let syncStatus = $state<SyncStatus>('disconnected');
+  let syncEmail = $state('');
+  let magicLinkInput = $state('');
+  let syncError = $state('');
+  let syncLoading = $state(false);
+
+  // Initialize storage mode and auth listener
+  $effect(() => {
+    getStorageMode().then(mode => { storageMode = mode; });
+    getSyncEmail().then(email => { if (email) syncEmail = email; });
+
+    const unsubAuth = onAuthChange((user) => {
+      if (user) {
+        authState = { user: { uid: user.uid, email: user.email }, status: 'signed-in' };
+        syncStatus = 'connected';
+        // Activate synced provider if in remote mode
+        if (storageMode === 'remote') {
+          const provider = activateSyncedProvider(user.uid);
+          provider.subscribe(() => loadTasks());
+          provider.initialUpload().then(() => loadTasks());
+        }
+      } else {
+        authState = { user: null, status: 'signed-out' };
+        syncStatus = 'disconnected';
+      }
+    });
+
+    return () => unsubAuth();
+  });
+
+  // Listen for deep link auth callbacks
+  $effect(() => {
+    const unlisten = onOpenUrl(async (urls: string[]) => {
+      for (const url of urls) {
+        if (url.startsWith('waid://auth-callback')) {
+          const params = new URL(url.replace('waid://', 'https://placeholder/'));
+          const link = params.searchParams.get('link');
+          if (link) {
+            try {
+              await completeMagicLink(decodeURIComponent(link));
+            } catch (err) {
+              syncError = String(err);
+            }
+          }
+        }
+      }
+    });
+    return () => { unlisten.then((fn: () => void) => fn()); };
+  });
+
+  // Check for sign-in link in URL on startup (dev mode)
+  $effect(() => {
+    const link = checkForSignInLink();
+    if (link) {
+      completeMagicLink(link).catch(err => { syncError = String(err); });
+    }
+  });
+
+  async function handleStorageModeChange(mode: StorageMode) {
+    syncError = '';
+    storageMode = mode;
+    await setStorageMode(mode);
+
+    if (mode === 'local') {
+      await signOut();
+      activateLocalProvider();
+      syncStatus = 'disconnected';
+      await loadTasks();
+    }
+  }
+
+  async function handleSendMagicLink() {
+    if (!syncEmail.trim()) return;
+    syncError = '';
+    syncLoading = true;
+    try {
+      await sendMagicLink(syncEmail.trim());
+      authState = { ...authState, status: 'pending' };
+    } catch (err) {
+      syncError = String(err);
+    } finally {
+      syncLoading = false;
+    }
+  }
+
+  async function handleCompleteMagicLink() {
+    if (!magicLinkInput.trim()) return;
+    syncError = '';
+    syncLoading = true;
+    try {
+      await completeMagicLink(magicLinkInput.trim());
+      magicLinkInput = '';
+    } catch (err) {
+      syncError = String(err);
+    } finally {
+      syncLoading = false;
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut();
+    activateLocalProvider();
+    syncStatus = 'disconnected';
+    authState = { user: null, status: 'signed-out' };
+    await loadTasks();
+  }
 
   $effect(() => {
     loadTasks();
@@ -546,18 +662,85 @@
 
       <hr class="border-border" />
 
+      <!-- Data Storage -->
+      <section>
+        <h3 class="mb-3 text-sm font-medium text-foreground">Data Storage</h3>
+        <div class="flex flex-col gap-3">
+          <!-- Storage mode toggle -->
+          <div class="flex rounded-md border border-border p-0.5">
+            <button
+              class="flex-1 rounded-sm px-3 py-1.5 text-sm font-medium cursor-pointer transition-colors {storageMode === 'local' ? 'bg-accent text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+              onclick={() => handleStorageModeChange('local')}
+            >
+              Local only
+            </button>
+            <button
+              class="flex-1 rounded-sm px-3 py-1.5 text-sm font-medium cursor-pointer transition-colors {storageMode === 'remote' ? 'bg-accent text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}"
+              onclick={() => handleStorageModeChange('remote')}
+            >
+              Remote (Firebase)
+            </button>
+          </div>
+
+          {#if storageMode === 'remote'}
+            <div class="flex flex-col gap-3 rounded-md border border-border bg-accent/30 p-3">
+              {#if authState.status === 'signed-in'}
+                <div class="flex items-center justify-between">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-sm text-foreground">{authState.user?.email}</span>
+                    <span class="text-xs text-muted-foreground">Sync: {syncStatus}</span>
+                  </div>
+                  <Button variant="outline" size="sm" onclick={handleSignOut}>
+                    Sign out
+                  </Button>
+                </div>
+              {:else if authState.status === 'pending'}
+                <p class="text-sm text-muted-foreground">Check your email for the magic link.</p>
+                <div class="flex items-center gap-2">
+                  <Input
+                    bind:value={magicLinkInput}
+                    placeholder="Paste sign-in link here..."
+                    class="h-9 flex-1 text-sm"
+                  />
+                  <Button variant="outline" size="sm" class="h-9 shrink-0" onclick={handleCompleteMagicLink} disabled={syncLoading}>
+                    {syncLoading ? 'Verifying...' : 'Sign in'}
+                  </Button>
+                </div>
+              {:else}
+                <div class="flex items-center gap-2">
+                  <Input
+                    bind:value={syncEmail}
+                    placeholder="Email address"
+                    class="h-9 flex-1 text-sm"
+                    type="email"
+                  />
+                  <Button variant="outline" size="sm" class="h-9 shrink-0" onclick={handleSendMagicLink} disabled={syncLoading}>
+                    {syncLoading ? 'Sending...' : 'Send link'}
+                  </Button>
+                </div>
+              {/if}
+              {#if syncError}
+                <span class="text-xs text-destructive">{syncError}</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </section>
+
+      <hr class="border-border" />
+
       <!-- Data -->
       <section>
         <h3 class="mb-3 text-sm font-medium text-foreground">Data</h3>
-        <div class="flex flex-col gap-2">
-          <Button variant="outline" size="sm" class="justify-start" onclick={handleImportDb}>
+        <div class="flex flex-col items-center gap-2 px-4">
+          <Button variant="outline" size="sm" class="w-full justify-center" onclick={handleImportDb}>
             Import database
           </Button>
-          <Button variant="outline" size="sm" class="justify-start" onclick={handleExportDb}>
+          <Button variant="outline" size="sm" class="w-full justify-center" onclick={handleExportDb}>
             Export database
           </Button>
           {#if confirmingReset}
-            <div class="flex flex-col items-center gap-2 rounded-md border border-destructive/50 p-3">
+            <div class="flex w-full flex-col items-center gap-2 rounded-md border border-destructive/50 p-3">
               <span class="text-sm text-destructive">This will delete all data and restart the app.</span>
               <div class="flex gap-2">
                 <Button variant="outline" size="sm" onclick={cancelReset}>Cancel</Button>
@@ -565,7 +748,7 @@
               </div>
             </div>
           {:else}
-            <Button variant="outline" size="sm" class="justify-start text-destructive hover:text-destructive" onclick={handleResetDb}>
+            <Button variant="outline" size="sm" class="w-full justify-center text-destructive hover:text-destructive" onclick={handleResetDb}>
               Reset database
             </Button>
           {/if}
