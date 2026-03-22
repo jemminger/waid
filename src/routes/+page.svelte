@@ -415,9 +415,49 @@
   async function handleOpenGitHub() {
     await openUrl(GITHUB_URL);
   }
+
+  // Pull-to-refresh (mobile only)
+  let pullY = $state(0);
+  let pulling = $state(false);
+  let refreshing = $state(false);
+  const PULL_THRESHOLD = 80;
+
+  function handleTouchStart(e: TouchEvent) {
+    if (!isMobile || window.scrollY > 0) return;
+    pulling = true;
+    pullY = 0;
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (!pulling || window.scrollY > 0) { pulling = false; pullY = 0; return; }
+    pullY = Math.min(e.touches[0].clientY - (e.target as Element).closest('.min-h-screen')!.getBoundingClientRect().top, PULL_THRESHOLD * 1.5);
+  }
+
+  async function handleTouchEnd() {
+    if (!pulling) return;
+    if (pullY >= PULL_THRESHOLD) {
+      refreshing = true;
+      await loadTasks();
+      refreshing = false;
+    }
+    pulling = false;
+    pullY = 0;
+  }
 </script>
 
-<div class="min-h-screen bg-muted">
+<div class="min-h-screen bg-muted"
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+>
+  <!-- Pull-to-refresh indicator -->
+  {#if isMobile && (pulling || refreshing)}
+    <div class="flex justify-center py-2 text-xs text-muted-foreground transition-opacity"
+      style="height: {pullY}px; opacity: {Math.min(pullY / PULL_THRESHOLD, 1)}">
+      {refreshing ? 'Refreshing...' : pullY >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}
+    </div>
+  {/if}
+
   <!-- Top Nav Bar -->
   <div class="sticky top-0 z-40 flex items-center gap-2 border-b border-border bg-background px-4 py-2 pt-[env(safe-area-inset-top,0px)]">
     <Input
