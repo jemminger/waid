@@ -1,8 +1,10 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
-import { readFile, writeFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { readFile, writeFile, remove, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { closeDb } from './db';
 
-const DB_FILENAME = 'waid.db';
+const DB_FILENAME = import.meta.env.DEV ? 'waid-dev.db' : 'waid.db';
+const DB_IMPORT_TMP = DB_FILENAME + '.import';
 
 export async function exportDb(): Promise<void> {
   const dest = await save({
@@ -16,8 +18,9 @@ export async function exportDb(): Promise<void> {
 }
 
 export async function resetDb(): Promise<void> {
+  await closeDb();
   await remove(DB_FILENAME, { baseDir: BaseDirectory.AppData });
-  await relaunch();
+  window.location.reload();
 }
 
 export async function importDb(): Promise<void> {
@@ -28,6 +31,9 @@ export async function importDb(): Promise<void> {
   if (!selected) return;
 
   const data = await readFile(selected);
-  await writeFile(DB_FILENAME, data, { baseDir: BaseDirectory.AppData });
-  await relaunch();
+  await writeFile(DB_IMPORT_TMP, data, { baseDir: BaseDirectory.AppData });
+  await closeDb();
+  await remove(DB_FILENAME, { baseDir: BaseDirectory.AppData });
+  await rename(DB_IMPORT_TMP, DB_FILENAME, { oldPathBaseDir: BaseDirectory.AppData, newPathBaseDir: BaseDirectory.AppData });
+  window.location.reload();
 }

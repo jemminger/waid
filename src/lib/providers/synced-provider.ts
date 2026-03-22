@@ -24,7 +24,8 @@ export class SyncedProvider implements TaskProvider {
 
   private tasksCollection() {
     const db = getFirebaseFirestore();
-    return collection(db, 'users', this.uid, 'tasks');
+    const tasksCollection = import.meta.env.DEV ? 'tasks-dev' : 'tasks';
+    return collection(db, 'users', this.uid, tasksCollection);
   }
 
   private async pushToFirestore(task: Task): Promise<Task> {
@@ -43,13 +44,12 @@ export class SyncedProvider implements TaskProvider {
       return task;
     }
 
-    // New task: create Firestore doc and save sync_id back to SQLite
+    // New task: save sync_id locally first to prevent duplicate from onSnapshot
     const docRef = doc(this.tasksCollection());
-    await setDoc(docRef, data);
-
     const db = await getDb();
     await db.execute('UPDATE tasks SET sync_id = ? WHERE id = ?', [docRef.id, task.id]);
     task.sync_id = docRef.id;
+    await setDoc(docRef, data);
     return task;
   }
 

@@ -157,26 +157,30 @@
 
   // Initialize storage mode and auth listener
   $effect(() => {
-    getStorageMode().then(mode => { storageMode = mode; });
-    getSyncEmail().then(email => { if (email) syncEmail = email; });
+    let unsubAuth: (() => void) | null = null;
 
-    const unsubAuth = onAuthChange((user) => {
-      if (user) {
-        authState = { user: { uid: user.uid, email: user.email }, status: 'signed-in' };
-        syncStatus = 'connected';
-        // Activate synced provider if in remote mode
-        if (storageMode === 'remote') {
-          const provider = activateSyncedProvider(user.uid);
-          provider.subscribe(() => loadTasks());
-          provider.initialUpload().then(() => loadTasks());
+    (async () => {
+      const [mode, email] = await Promise.all([getStorageMode(), getSyncEmail()]);
+      storageMode = mode;
+      if (email) syncEmail = email;
+
+      unsubAuth = onAuthChange((user) => {
+        if (user) {
+          authState = { user: { uid: user.uid, email: user.email }, status: 'signed-in' };
+          syncStatus = 'connected';
+          if (storageMode === 'remote') {
+            const provider = activateSyncedProvider(user.uid);
+            provider.subscribe(() => loadTasks());
+            provider.initialUpload().then(() => loadTasks());
+          }
+        } else {
+          authState = { user: null, status: 'signed-out' };
+          syncStatus = 'disconnected';
         }
-      } else {
-        authState = { user: null, status: 'signed-out' };
-        syncStatus = 'disconnected';
-      }
-    });
+      });
+    })();
 
-    return () => unsubAuth();
+    return () => { if (unsubAuth) unsubAuth(); };
   });
 
   // Listen for deep link auth callbacks
